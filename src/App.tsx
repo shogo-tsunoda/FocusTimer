@@ -5,6 +5,8 @@ import {
   RotateCcw,
   SkipForward,
   Settings,
+  Minus,
+  X,
   ArrowLeft,
   ChevronDown,
   PencilLine,
@@ -261,6 +263,8 @@ function TimerScreen({
   onSkip,
   onTaskNameChange,
   onOpenSettings,
+  onMinimizeWindow,
+  onCloseWindow,
 }: {
   snapshot: TimerSnapshot;
   settings: AppSettings;
@@ -271,6 +275,8 @@ function TimerScreen({
   onSkip: () => void;
   onTaskNameChange: (name: string) => void;
   onOpenSettings: () => void;
+  onMinimizeWindow: () => void;
+  onCloseWindow: () => void;
 }) {
   const t = LANG[settings.language];
   const kind = snapshot.kind;
@@ -346,8 +352,7 @@ function TimerScreen({
 
   return (
     <div
-      className="flex flex-col items-center w-[320px] select-none bg-[#0F1117] rounded-[16px] overflow-hidden"
-      style={{ height: "460px" }}
+      className="flex h-full w-full flex-col items-center overflow-hidden bg-[#0F1117] select-none"
     >
       {/* Header – drag region */}
       <div
@@ -357,13 +362,32 @@ function TimerScreen({
         <span className={`text-[12px] font-semibold tracking-[1.5px] ${accent} pointer-events-none`}>
           {modeLabel}
         </span>
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={onOpenSettings}
-          className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
-        >
-          <Settings size={18} className="text-[#555B6E]" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onOpenSettings}
+            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
+            aria-label="Settings"
+          >
+            <Settings size={18} className="text-[#555B6E]" />
+          </button>
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onMinimizeWindow}
+            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
+            aria-label="Minimize"
+          >
+            <Minus size={18} className="text-[#8B91A0]" />
+          </button>
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onCloseWindow}
+            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
+            aria-label="Close"
+          >
+            <X size={18} className="text-[#8B91A0]" />
+          </button>
+        </div>
       </div>
 
       {/* Timer ring */}
@@ -455,10 +479,14 @@ function SettingsScreen({
   settings,
   onSave,
   onBack,
+  onMinimizeWindow,
+  onCloseWindow,
 }: {
   settings: AppSettings;
   onSave: (s: AppSettings) => void;
   onBack: () => void;
+  onMinimizeWindow: () => void;
+  onCloseWindow: () => void;
 }) {
   const [draft, setDraft] = useState<AppSettings>({ ...settings });
   const t = LANG[draft.language];
@@ -496,22 +524,41 @@ function SettingsScreen({
 
   return (
     <div
-      className="flex flex-col w-[320px] bg-[#0F1117] rounded-[16px] select-none"
-      style={{ height: "460px" }}
+      className="flex h-full w-full flex-col bg-[#0F1117] select-none"
     >
       {/* Header – drag region */}
       <div
-        className="flex items-center gap-3 w-full h-[48px] px-5 flex-shrink-0 cursor-default"
+        className="flex items-center justify-between w-full h-[48px] px-5 flex-shrink-0 cursor-default"
         onMouseDown={() => invoke("window_drag").catch(() => {})}
       >
-        <button
-          onMouseDown={(e) => e.stopPropagation()}
-          onClick={onBack}
-          className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
-        >
-          <ArrowLeft size={18} className="text-[#8B91A0]" />
-        </button>
-        <span className="text-[15px] font-semibold text-[#F0F2F5] pointer-events-none">{t.settings}</span>
+        <div className="flex items-center gap-3">
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onBack}
+            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
+          >
+            <ArrowLeft size={18} className="text-[#8B91A0]" />
+          </button>
+          <span className="text-[15px] font-semibold text-[#F0F2F5] pointer-events-none">{t.settings}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onMinimizeWindow}
+            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
+            aria-label="Minimize"
+          >
+            <Minus size={18} className="text-[#8B91A0]" />
+          </button>
+          <button
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={onCloseWindow}
+            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
+            aria-label="Close"
+          >
+            <X size={18} className="text-[#8B91A0]" />
+          </button>
+        </div>
       </div>
 
       {/* Scrollable body */}
@@ -863,7 +910,7 @@ export default function App() {
   };
 
   const rootClass =
-    "w-[320px] flex items-center justify-center bg-transparent";
+    "flex h-full w-full items-center justify-center bg-[#0F1117]";
 
   if (screen === "settings") {
     return (
@@ -872,6 +919,8 @@ export default function App() {
           settings={settings}
           onSave={handleSaveSettings}
           onBack={() => setScreen("timer")}
+          onMinimizeWindow={() => invoke_cmd("window_minimize")}
+          onCloseWindow={() => invoke_cmd("window_close")}
         />
       </div>
     );
@@ -889,6 +938,8 @@ export default function App() {
         onSkip={() => invoke_cmd("timer_skip")}
         onTaskNameChange={handleTaskNameChange}
         onOpenSettings={() => setScreen("settings")}
+        onMinimizeWindow={() => invoke_cmd("window_minimize")}
+        onCloseWindow={() => invoke_cmd("window_close")}
       />
     </div>
   );

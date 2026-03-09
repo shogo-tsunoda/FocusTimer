@@ -128,6 +128,22 @@ async fn window_drag(app_handle: AppHandle) -> Result<(), ()> {
     Ok(())
 }
 
+#[tauri::command]
+async fn window_close(app_handle: AppHandle) -> Result<(), ()> {
+    if let Some(win) = app_handle.get_webview_window("main") {
+        let _ = win.close();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn window_minimize(app_handle: AppHandle) -> Result<(), ()> {
+    if let Some(win) = app_handle.get_webview_window("main") {
+        let _ = win.minimize();
+    }
+    Ok(())
+}
+
 // ─── App Entry ────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -238,6 +254,8 @@ pub fn run() {
             timer_skip,
             set_task_name,
             window_drag,
+            window_close,
+            window_minimize,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
