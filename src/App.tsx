@@ -733,6 +733,22 @@ export default function App() {
     notify: null,
   });
   const [tauriReady, setTauriReady] = useState(false);
+  // Ref so event listeners always see current settings without re-registering
+  const settingsRef = useRef<AppSettings>(DEFAULT_SETTINGS);
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  // Ref for current snapshot (keyboard shortcut handler)
+  const snapshotRef = useRef<TimerSnapshot>(snapshot);
+  useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
+
+  const screenRef = useRef<AppScreen>("timer");
+  useEffect(() => {
+    screenRef.current = screen;
+  }, [screen]);
 
   // Sound beep using Web Audio API
   const playBeep = useCallback(() => {
@@ -772,18 +788,17 @@ export default function App() {
           await Notification.requestPermission();
         }
 
-        // Subscribe to timer ticks
+        // Subscribe to timer ticks — use ref to avoid stale settings closure
         unlisten = await listen<TimerSnapshot>("timer-tick", (event) => {
           setSnapshot(event.payload);
 
           if (event.payload.notify) {
-            // Sound
-            if (s.sound_enabled) playBeep();
-            // Desktop notification
-            if (s.notifications_enabled && Notification.permission === "granted") {
+            const cur = settingsRef.current;
+            if (cur.sound_enabled) playBeep();
+            if (cur.notifications_enabled && Notification.permission === "granted") {
               void new Notification("FocusTimer", {
                 body: event.payload.notify,
-                silent: true, // use our own beep instead of system sound
+                silent: true,
               });
             }
           }
@@ -810,6 +825,31 @@ export default function App() {
     },
     [tauriReady]
   );
+
+  // Keyboard shortcuts: Space=play/pause, R=reset, S=skip
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (screenRef.current !== "timer") return;
+
+      const snap = snapshotRef.current;
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (snap.run_state === "running") void invoke_cmd("timer_pause");
+        else if (snap.run_state === "paused") void invoke_cmd("timer_resume");
+        else void invoke_cmd("timer_start");
+      } else if (e.code === "KeyR") {
+        e.preventDefault();
+        void invoke_cmd("timer_reset");
+      } else if (e.code === "KeyS") {
+        e.preventDefault();
+        void invoke_cmd("timer_skip");
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [invoke_cmd]);
 
   const handleSaveSettings = async (s: AppSettings) => {
     setSettings(s);

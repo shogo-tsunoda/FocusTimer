@@ -1,14 +1,31 @@
+# Claude Code local files
+.claude/
+
 # Node
 node_modules/
 dist/
 
 # Rust / Tauri
 src-tauri/target/
+src-tauri/gen/
 
-# Temp files from build workaround
-bootstrap.sh
-run_build_scripts.sh
+# Vite / env
+*.local
+.env
+.env.*
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

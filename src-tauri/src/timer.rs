@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tokio::sync::{mpsc, Mutex};
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -71,9 +71,6 @@ struct Core {
     long_break_interval: u32,
     auto_start_break: bool,
     auto_start_focus: bool,
-    // tracking
-    run_start: Option<Instant>,
-    paused_remaining: Option<u32>,
 }
 
 impl Core {
@@ -103,8 +100,6 @@ impl Core {
             long_break_interval,
             auto_start_break,
             auto_start_focus,
-            run_start: None,
-            paused_remaining: None,
         }
     }
 
@@ -124,9 +119,9 @@ impl Core {
     }
 
     /// Called every second while running. Returns snapshot (with optional notification).
-    fn tick(&mut self) -> (TimerSnapshot, bool) {
+    fn tick(&mut self) -> TimerSnapshot {
         if self.run_state != RunState::Running {
-            return (self.snapshot(None), false);
+            return self.snapshot(None);
         }
 
         // Track focus time
@@ -140,11 +135,10 @@ impl Core {
 
         if self.seconds_left == 0 {
             let notify = self.advance_session();
-            let snap = self.snapshot(Some(notify));
-            return (snap, true);
+            return self.snapshot(Some(notify));
         }
 
-        (self.snapshot(None), false)
+        self.snapshot(None)
     }
 
     /// Advance to the next session. Returns notification message.
@@ -169,9 +163,7 @@ impl Core {
                 }
                 self.seconds_left = self.total_seconds;
 
-                if self.auto_start_break {
-                    self.run_start = Some(Instant::now());
-                } else {
+                if !self.auto_start_break {
                     self.run_state = RunState::Idle;
                 }
             }
@@ -188,9 +180,7 @@ impl Core {
                 self.total_seconds = self.focus_secs;
                 self.seconds_left = self.total_seconds;
 
-                if self.auto_start_focus {
-                    self.run_start = Some(Instant::now());
-                } else {
+                if !self.auto_start_focus {
                     self.run_state = RunState::Idle;
                 }
             }
@@ -201,35 +191,28 @@ impl Core {
     fn start(&mut self) {
         if self.run_state == RunState::Idle {
             self.run_state = RunState::Running;
-            self.run_start = Some(Instant::now());
         }
     }
 
     fn pause(&mut self) {
         if self.run_state == RunState::Running {
             self.run_state = RunState::Paused;
-            self.paused_remaining = Some(self.seconds_left);
         }
     }
 
     fn resume(&mut self) {
         if self.run_state == RunState::Paused {
             self.run_state = RunState::Running;
-            self.run_start = Some(Instant::now());
         }
     }
 
     fn reset(&mut self) {
         self.run_state = RunState::Idle;
         self.seconds_left = self.total_seconds;
-        self.paused_remaining = None;
-        self.run_start = None;
     }
 
     fn skip(&mut self) {
         self.run_state = RunState::Idle;
-        self.paused_remaining = None;
-        self.run_start = None;
         let _ = self.advance_session();
         // After skip, always go idle regardless of auto-start
         self.run_state = RunState::Idle;
@@ -265,7 +248,7 @@ impl Core {
 }
 
 pub struct TimerHandle {
-    tx: mpsc::Sender<TimerCommand>,
+    pub tx: mpsc::Sender<TimerCommand>,
     pub snapshot: Arc<Mutex<TimerSnapshot>>,
 }
 
@@ -315,7 +298,7 @@ pub fn spawn(
             tokio::select! {
                 _ = interval.tick() => {
                     if core.run_state == RunState::Running {
-                        let (snap, _changed) = core.tick();
+                        let snap = core.tick();
                         let mut guard = snapshot_arc_task.lock().await;
                         *guard = snap.clone();
                         drop(guard);

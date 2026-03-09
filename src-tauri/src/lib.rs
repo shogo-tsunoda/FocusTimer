@@ -38,11 +38,13 @@ async fn save_settings(
     state: tauri::State<'_, Arc<Mutex<AppState>>>,
     app_handle: AppHandle,
 ) -> Result<(), ()> {
-    let app = state.lock().await;
-    let data_dir = app.data_dir.clone();
+    let (data_dir, timer_ref) = {
+        let app = state.lock().await;
+        (app.data_dir.clone(), app.timer.tx.clone())
+    };
 
     // Apply timer settings
-    app.timer
+    let _ = timer_ref
         .send(timer::TimerCommand::ApplySettings {
             focus_secs: new_settings.focus_minutes * 60,
             break_secs: new_settings.break_minutes * 60,
@@ -60,6 +62,8 @@ async fn save_settings(
     }
 
     settings::save(&data_dir, &new_settings);
+
+    let app = state.lock().await;
     let mut s = app.settings.lock().await;
     *s = new_settings;
     Ok(())
