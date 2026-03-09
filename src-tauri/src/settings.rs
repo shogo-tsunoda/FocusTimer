@@ -1,4 +1,8 @@
 use serde::{Deserialize, Serialize};
+
+fn default_theme_color() -> String {
+    "#0F1117".to_string()
+}
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,7 +29,8 @@ pub struct Settings {
     pub always_on_top: bool,
     pub minimize_to_tray: bool,
     pub language: String,
-    pub dark_mode: bool,
+    #[serde(default = "default_theme_color")]
+    pub theme_color: String,
     pub task_name: String,
 }
 
@@ -65,7 +70,7 @@ impl Default for Settings {
             always_on_top: false,
             minimize_to_tray: true,
             language: "ja".to_string(),
-            dark_mode: true,
+            theme_color: default_theme_color(),
             task_name: String::new(),
         }
     }

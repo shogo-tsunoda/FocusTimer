@@ -5,13 +5,12 @@ import {
   RotateCcw,
   SkipForward,
   Settings,
-  Minus,
-  X,
   ArrowLeft,
   ChevronDown,
   PencilLine,
   Coffee,
   Flame,
+  Plus,
 } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
@@ -57,7 +56,7 @@ interface AppSettings {
   always_on_top: boolean;
   minimize_to_tray: boolean;
   language: Language;
-  dark_mode: boolean;
+  theme_color: string;
   task_name: string;
 }
 
@@ -83,7 +82,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   always_on_top: false,
   minimize_to_tray: true,
   language: "ja",
-  dark_mode: true,
+  theme_color: "#0F1117",
   task_name: "",
 };
 
@@ -115,9 +114,10 @@ const LANG = {
     breakEndMsg: "休憩完了メッセージ",
     general: "一般",
     alwaysOnTop: "常に手前に表示",
-    minimizeToTray: "心の中でトレイに格納",
+    minimizeToTray: "最小化してトレイに収納",
     language: "言語",
-    darkMode: "ダークモード",
+    theme: "テーマ",
+    themeCustom: "カスタム",
     save: "保存",
     task_placeholder: "タスク名を入力...",
     notifMsg: "通知メッセージ",
@@ -151,7 +151,8 @@ const LANG = {
     alwaysOnTop: "Always on top",
     minimizeToTray: "Minimize to tray",
     language: "Language",
-    darkMode: "Dark mode",
+    theme: "Theme",
+    themeCustom: "Custom",
     save: "Save",
     task_placeholder: "Enter task name...",
     notifMsg: "NOTIFICATION MESSAGES",
@@ -159,6 +160,13 @@ const LANG = {
 } as const;
 
 const LANG_LABELS: Record<Language, string> = { ja: "日本語", en: "English" };
+
+const THEME_PRESETS = [
+  { name: "Dark",     color: "#0F1117" },
+  { name: "Navy",     color: "#0A0F1E" },
+  { name: "Slate",    color: "#1C2333" },
+  { name: "Midnight", color: "#080B14" },
+] as const;
 
 // ─── Circular Progress Ring ───────────────────────────────────
 function TimerRing({
@@ -240,13 +248,15 @@ function Toggle({
 function SettingsRow({
   label,
   children,
+  small,
 }: {
   label: string;
   children: React.ReactNode;
+  small?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between w-full h-[40px] px-3 rounded-[8px] bg-[#2A2E3D]">
-      <span className="text-[13px] text-[#8B91A0]">{label}</span>
+      <span className={`${small ? "text-[12px]" : "text-[13px]"} text-[#8B91A0]`}>{label}</span>
       {children}
     </div>
   );
@@ -263,8 +273,6 @@ function TimerScreen({
   onSkip,
   onTaskNameChange,
   onOpenSettings,
-  onMinimizeWindow,
-  onCloseWindow,
 }: {
   snapshot: TimerSnapshot;
   settings: AppSettings;
@@ -275,8 +283,6 @@ function TimerScreen({
   onSkip: () => void;
   onTaskNameChange: (name: string) => void;
   onOpenSettings: () => void;
-  onMinimizeWindow: () => void;
-  onCloseWindow: () => void;
 }) {
   const t = LANG[settings.language];
   const kind = snapshot.kind;
@@ -352,7 +358,8 @@ function TimerScreen({
 
   return (
     <div
-      className="flex h-full w-full flex-col items-center overflow-hidden bg-[#0F1117] select-none"
+      className="flex h-full w-full flex-col items-center overflow-hidden select-none"
+      style={{ backgroundColor: settings.theme_color }}
     >
       {/* Header – drag region */}
       <div
@@ -362,32 +369,14 @@ function TimerScreen({
         <span className={`text-[12px] font-semibold tracking-[1.5px] ${accent} pointer-events-none`}>
           {modeLabel}
         </span>
-        <div className="flex items-center gap-1">
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onOpenSettings}
-            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
-            aria-label="Settings"
-          >
-            <Settings size={18} className="text-[#555B6E]" />
-          </button>
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onMinimizeWindow}
-            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
-            aria-label="Minimize"
-          >
-            <Minus size={18} className="text-[#8B91A0]" />
-          </button>
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onCloseWindow}
-            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
-            aria-label="Close"
-          >
-            <X size={18} className="text-[#8B91A0]" />
-          </button>
-        </div>
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={onOpenSettings}
+          className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
+          aria-label="Settings"
+        >
+          <Settings size={18} className="text-[#555B6E]" />
+        </button>
       </div>
 
       {/* Timer ring */}
@@ -402,7 +391,7 @@ function TimerScreen({
       </div>
 
       {/* Task row */}
-      <div className="flex items-center justify-center gap-[6px] w-full px-5 py-1 flex-shrink-0">
+      <div className="flex items-center justify-center gap-[6px] w-full pt-[8px] pb-[6px] px-5 flex-shrink-0">
         {isBreak ? (
           <Coffee size={12} className="text-[#444857] flex-shrink-0" />
         ) : (
@@ -431,7 +420,7 @@ function TimerScreen({
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-center gap-[20px] w-full px-10 py-3 flex-shrink-0">
+      <div className="flex items-center justify-center gap-[20px] w-full px-10 py-[14px] flex-shrink-0">
         <button
           onClick={onReset}
           className="flex items-center justify-center w-[44px] h-[44px] rounded-full bg-[#242836] hover:bg-[#2A2E3D] transition-colors"
@@ -459,12 +448,12 @@ function TimerScreen({
       </div>
 
       {/* Session pips */}
-      <div className="flex items-center gap-[6px] w-full px-[50px] py-2 flex-shrink-0">
+      <div className="flex items-center gap-[6px] w-full py-[10px] px-[52px] flex-shrink-0">
         {pips}
       </div>
 
       {/* Today stats */}
-      <div className="flex items-center justify-center gap-[4px] w-full px-5 pb-5 flex-shrink-0">
+      <div className="flex items-center justify-center gap-[4px] w-full px-5 pt-[6px] pb-5 flex-shrink-0">
         <Flame size={12} className="text-[#444857]" />
         <span className="text-[10px] text-[#444857]">
           {t.today(snapshot.today_sessions, todayMinutes)}
@@ -478,19 +467,20 @@ function TimerScreen({
 function SettingsScreen({
   settings,
   onSave,
-  onBack,
-  onMinimizeWindow,
-  onCloseWindow,
 }: {
   settings: AppSettings;
   onSave: (s: AppSettings) => void;
-  onBack: () => void;
-  onMinimizeWindow: () => void;
-  onCloseWindow: () => void;
 }) {
   const [draft, setDraft] = useState<AppSettings>({ ...settings });
   const t = LANG[draft.language];
   const [langOpen, setLangOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+  const [hexInput, setHexInput] = useState(draft.theme_color);
+
+  // Sync hexInput when theme changes via preset click
+  useEffect(() => {
+    setHexInput(draft.theme_color);
+  }, [draft.theme_color]);
 
   const inputClass =
     "w-full h-[40px] px-3 rounded-[8px] text-[14px] font-medium outline-none bg-[#2A2E3D] text-[#F0F2F5] placeholder-[#555B6E]";
@@ -498,8 +488,8 @@ function SettingsScreen({
     "text-[10px] font-semibold tracking-[2px] text-[#555B6E]";
   const labelClass = "text-[11px] font-medium text-[#8B91A0]";
 
-  const numRow = (label: string, key: keyof AppSettings, min: number, max: number) => (
-    <SettingsRow label={label}>
+  const numRow = (label: string, key: keyof AppSettings, min: number, max: number, small?: boolean) => (
+    <SettingsRow label={label} small={small}>
       <input
         type="number"
         min={min}
@@ -513,8 +503,8 @@ function SettingsScreen({
     </SettingsRow>
   );
 
-  const toggleRow = (label: string, key: keyof AppSettings) => (
-    <SettingsRow label={label}>
+  const toggleRow = (label: string, key: keyof AppSettings, small?: boolean) => (
+    <SettingsRow label={label} small={small}>
       <Toggle
         checked={draft[key] as boolean}
         onChange={(v) => setDraft({ ...draft, [key]: v })}
@@ -522,54 +512,39 @@ function SettingsScreen({
     </SettingsRow>
   );
 
+  const isPreset = THEME_PRESETS.some(
+    (p) => p.color.toLowerCase() === draft.theme_color.toLowerCase()
+  );
+
   return (
     <div
-      className="flex h-full w-full flex-col bg-[#0F1117] select-none"
+      className="flex h-full w-full flex-col select-none"
+      style={{ backgroundColor: draft.theme_color }}
     >
       {/* Header – drag region */}
       <div
-        className="flex items-center justify-between w-full h-[48px] px-5 flex-shrink-0 cursor-default"
+        className="flex items-center gap-3 w-full h-[48px] px-5 flex-shrink-0 cursor-default"
         onMouseDown={() => invoke("window_drag").catch(() => {})}
       >
-        <div className="flex items-center gap-3">
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onBack}
-            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
-          >
-            <ArrowLeft size={18} className="text-[#8B91A0]" />
-          </button>
-          <span className="text-[15px] font-semibold text-[#F0F2F5] pointer-events-none">{t.settings}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onMinimizeWindow}
-            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
-            aria-label="Minimize"
-          >
-            <Minus size={18} className="text-[#8B91A0]" />
-          </button>
-          <button
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={onCloseWindow}
-            className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
-            aria-label="Close"
-          >
-            <X size={18} className="text-[#8B91A0]" />
-          </button>
-        </div>
+        <button
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={() => onSave(draft)}
+          className="p-1 rounded-[6px] hover:bg-[#242836] transition-colors"
+        >
+          <ArrowLeft size={18} className="text-[#8B91A0]" />
+        </button>
+        <span className="text-[15px] font-semibold text-[#F0F2F5] pointer-events-none">{t.settings}</span>
       </div>
 
       {/* Scrollable body */}
-      <div className="flex-1 overflow-y-auto px-5 pb-5 flex flex-col gap-6"
+      <div className="flex-1 overflow-y-auto pt-4 px-5 pb-6 flex flex-col gap-7"
         style={{
           scrollbarWidth: "thin",
           scrollbarColor: "#2E3345 transparent",
         }}
       >
         {/* Timer */}
-        <div className="flex flex-col gap-[10px]">
+        <div className="flex flex-col gap-2">
           <span className={sectionTitle}>{t.timer}</span>
           {/* Focus / Break minutes */}
           <div className="flex gap-3">
@@ -610,26 +585,48 @@ function SettingsScreen({
             />
           </SettingsRow>
           {draft.long_break_interval > 0 && (
-            <div className="flex flex-col gap-[8px] pl-3">
-              {numRow(t.longBreakLen, "long_break_minutes", 5, 60)}
-              {numRow(t.longBreakInterval, "long_break_interval", 1, 12)}
+            <div className="flex flex-col gap-[6px] pt-1 pl-3">
+              <SettingsRow label={t.longBreakLen}>
+                <input
+                  type="number"
+                  min={5}
+                  max={60}
+                  value={draft.long_break_minutes}
+                  onChange={(e) =>
+                    setDraft({ ...draft, long_break_minutes: Math.max(5, Math.min(60, +e.target.value || 5)) })
+                  }
+                  className="w-[48px] text-right bg-transparent text-[13px] font-medium text-[#F0F2F5] outline-none rounded-[6px]"
+                />
+              </SettingsRow>
+              <SettingsRow label={t.longBreakInterval}>
+                <input
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={draft.long_break_interval}
+                  onChange={(e) =>
+                    setDraft({ ...draft, long_break_interval: Math.max(1, Math.min(12, +e.target.value || 1)) })
+                  }
+                  className="w-[48px] text-right bg-transparent text-[13px] font-medium text-[#F0F2F5] outline-none rounded-[6px]"
+                />
+              </SettingsRow>
             </div>
           )}
         </div>
 
         {/* Auto start */}
-        <div className="flex flex-col gap-[10px]">
+        <div className="flex flex-col gap-2">
           <span className={sectionTitle}>{t.autoStart}</span>
-          {toggleRow(t.autoBreak, "auto_start_break")}
-          {toggleRow(t.autoFocus, "auto_start_focus")}
+          {toggleRow(t.autoBreak, "auto_start_break", true)}
+          {toggleRow(t.autoFocus, "auto_start_focus", true)}
         </div>
 
         {/* Notifications */}
-        <div className="flex flex-col gap-[10px]">
+        <div className="flex flex-col gap-2">
           <span className={sectionTitle}>{t.notifications}</span>
           {toggleRow(t.notifEnabled, "notifications_enabled")}
           {toggleRow(t.notifSound, "sound_enabled")}
-          {toggleRow(t.customMessages, "custom_messages")}
+          {toggleRow(t.customMessages, "custom_messages", true)}
 
           {!draft.custom_messages ? (
             <>
@@ -641,7 +638,7 @@ function SettingsScreen({
                   onChange={(e) =>
                     setDraft({ ...draft, focus_message: e.target.value })
                   }
-                  className={inputClass}
+                  className="w-full h-[40px] px-3 rounded-[8px] text-[13px] outline-none bg-[#2A2E3D] text-[#F0F2F5] placeholder-[#555B6E]"
                 />
               </div>
               <div className="flex flex-col gap-[6px]">
@@ -652,7 +649,7 @@ function SettingsScreen({
                   onChange={(e) =>
                     setDraft({ ...draft, break_message: e.target.value })
                   }
-                  className={inputClass}
+                  className="w-full h-[40px] px-3 rounded-[8px] text-[13px] outline-none bg-[#2A2E3D] text-[#F0F2F5] placeholder-[#555B6E]"
                 />
               </div>
             </>
@@ -709,15 +706,15 @@ function SettingsScreen({
         </div>
 
         {/* General */}
-        <div className="flex flex-col gap-[10px]">
+        <div className="flex flex-col gap-2">
           <span className={sectionTitle}>{t.general}</span>
           {toggleRow(t.alwaysOnTop, "always_on_top")}
-          {toggleRow(t.minimizeToTray, "minimize_to_tray")}
+          {toggleRow(t.minimizeToTray, "minimize_to_tray", true)}
 
           {/* Language */}
           <div className="relative">
             <button
-              onClick={() => setLangOpen(!langOpen)}
+              onClick={() => { setLangOpen(!langOpen); setThemeOpen(false); }}
               className="flex items-center justify-between w-full h-[40px] px-3 rounded-[8px] bg-[#2A2E3D]"
             >
               <span className="text-[13px] text-[#8B91A0]">{t.language}</span>
@@ -748,16 +745,99 @@ function SettingsScreen({
             )}
           </div>
 
-          {toggleRow(t.darkMode, "dark_mode")}
-        </div>
+          {/* Theme */}
+          <div>
+            <button
+              onClick={() => { setThemeOpen(!themeOpen); setLangOpen(false); }}
+              className="flex items-center justify-between w-full h-[40px] px-3 rounded-[8px] bg-[#2A2E3D]"
+            >
+              <span className="text-[13px] text-[#8B91A0]">{t.theme}</span>
+              <span className="flex items-center gap-[6px]">
+                <span
+                  className="w-[14px] h-[14px] rounded-full"
+                  style={{ backgroundColor: draft.theme_color }}
+                />
+                <ChevronDown size={14} className="text-[#555B6E]" />
+              </span>
+            </button>
 
-        {/* Save */}
-        <button
-          onClick={() => onSave(draft)}
-          className="w-full h-[42px] rounded-[8px] bg-[#3B82F6] text-white text-[14px] font-semibold shadow-[0_2px_16px_rgba(59,130,246,0.19)] hover:brightness-110 active:scale-[0.98] transition-all"
-        >
-          {t.save}
-        </button>
+            {themeOpen && (
+              <div className="mt-[6px] rounded-[8px] bg-[#242836] p-3 flex flex-col gap-3">
+                {/* Presets */}
+                <div className="flex gap-2">
+                  {THEME_PRESETS.map((p) => {
+                    const active = draft.theme_color.toLowerCase() === p.color.toLowerCase();
+                    return (
+                      <div key={p.color} className="flex-1 flex flex-col items-center gap-[5px]">
+                        <button
+                          onClick={() => setDraft({ ...draft, theme_color: p.color })}
+                          className="w-9 h-9 rounded-[10px] transition-all"
+                          style={{
+                            backgroundColor: p.color,
+                            outline: active ? "2px solid #3B82F6" : "none",
+                            outlineOffset: "2px",
+                          }}
+                        />
+                        <span className={`text-[10px] font-medium ${active ? "text-[#F0F2F5]" : "text-[#8B91A0]"}`}>
+                          {p.name}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {/* Custom */}
+                  <div className="flex-1 flex flex-col items-center gap-[5px]">
+                    <button
+                      onClick={() => {}}
+                      className="w-9 h-9 rounded-[10px] flex items-center justify-center transition-all"
+                      style={{
+                        backgroundColor: "#242836",
+                        border: "1px solid #2E3345",
+                        outline: !isPreset ? "2px solid #3B82F6" : "none",
+                        outlineOffset: "2px",
+                      }}
+                    >
+                      <Plus size={16} className="text-[#555B6E]" />
+                    </button>
+                    <span className={`text-[10px] font-medium ${!isPreset ? "text-[#F0F2F5]" : "text-[#8B91A0]"}`}>
+                      {t.themeCustom}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Hex input */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-[#555B6E] shrink-0">HEX</span>
+                  <div className="flex-1 flex items-center h-8 px-[10px] rounded-[6px] bg-[#2A2E3D]">
+                    <input
+                      type="text"
+                      value={hexInput}
+                      onChange={(e) => setHexInput(e.target.value)}
+                      onBlur={() => {
+                        const v = hexInput.startsWith("#") ? hexInput : "#" + hexInput;
+                        if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+                          setDraft({ ...draft, theme_color: v });
+                        } else {
+                          setHexInput(draft.theme_color);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const v = hexInput.startsWith("#") ? hexInput : "#" + hexInput;
+                          if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+                            setDraft({ ...draft, theme_color: v });
+                          } else {
+                            setHexInput(draft.theme_color);
+                          }
+                        }
+                      }}
+                      className="bg-transparent text-[12px] text-[#F0F2F5] outline-none w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -780,13 +860,11 @@ export default function App() {
     notify: null,
   });
   const [tauriReady, setTauriReady] = useState(false);
-  // Ref so event listeners always see current settings without re-registering
   const settingsRef = useRef<AppSettings>(DEFAULT_SETTINGS);
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
 
-  // Ref for current snapshot (keyboard shortcut handler)
   const snapshotRef = useRef<TimerSnapshot>(snapshot);
   useEffect(() => {
     snapshotRef.current = snapshot;
@@ -822,20 +900,16 @@ export default function App() {
 
     const init = async () => {
       try {
-        // Load settings
         const s = await invoke<AppSettings>("get_settings");
         setSettings(s);
 
-        // Load initial snapshot
         const snap = await invoke<TimerSnapshot>("get_snapshot");
         setSnapshot(snap);
 
-        // Request notification permission
         if ("Notification" in window && Notification.permission === "default") {
           await Notification.requestPermission();
         }
 
-        // Subscribe to timer ticks — use ref to avoid stale settings closure
         unlisten = await listen<TimerSnapshot>("timer-tick", (event) => {
           setSnapshot(event.payload);
 
@@ -853,7 +927,6 @@ export default function App() {
 
         setTauriReady(true);
       } catch {
-        // Running in browser dev mode without Tauri - use local state
         setTauriReady(false);
       }
     };
@@ -863,7 +936,7 @@ export default function App() {
     return () => {
       unlisten?.();
     };
-  }, [playBeep]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [playBeep]);
 
   const invoke_cmd = useCallback(
     async (cmd: string, args?: Record<string, unknown>) => {
@@ -910,24 +983,21 @@ export default function App() {
   };
 
   const rootClass =
-    "flex h-full w-full items-center justify-center bg-[#0F1117]";
+    "flex h-full w-full items-center justify-center";
 
   if (screen === "settings") {
     return (
-      <div className={rootClass}>
+      <div className={rootClass} style={{ backgroundColor: settings.theme_color }}>
         <SettingsScreen
           settings={settings}
           onSave={handleSaveSettings}
-          onBack={() => setScreen("timer")}
-          onMinimizeWindow={() => invoke_cmd("window_minimize")}
-          onCloseWindow={() => invoke_cmd("window_close")}
         />
       </div>
     );
   }
 
   return (
-    <div className={rootClass}>
+    <div className={rootClass} style={{ backgroundColor: settings.theme_color }}>
       <TimerScreen
         snapshot={snapshot}
         settings={settings}
@@ -938,8 +1008,6 @@ export default function App() {
         onSkip={() => invoke_cmd("timer_skip")}
         onTaskNameChange={handleTaskNameChange}
         onOpenSettings={() => setScreen("settings")}
-        onMinimizeWindow={() => invoke_cmd("window_minimize")}
-        onCloseWindow={() => invoke_cmd("window_close")}
       />
     </div>
   );
