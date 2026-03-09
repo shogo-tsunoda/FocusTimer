@@ -280,7 +280,7 @@ pub fn spawn(
     let snapshot_arc = Arc::new(Mutex::new(initial_snap.clone()));
     let snapshot_arc_task = Arc::clone(&snapshot_arc);
 
-    tokio::spawn(async move {
+    tauri::async_runtime::spawn(async move {
         let mut core = Core::new(
             initial.focus_minutes * 60,
             initial.break_minutes * 60,

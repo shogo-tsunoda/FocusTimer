@@ -158,7 +158,7 @@ pub fn run() {
 
             // Background task: forward timer snapshots to frontend
             let app_handle = app.handle().clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 while let Some(snap) = snap_rx.recv().await {
                     let _ = app_handle.emit("timer-tick", &snap);
                 }
