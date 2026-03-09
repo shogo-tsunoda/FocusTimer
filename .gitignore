@@ -1,0 +1,14 @@
+# Node
+node_modules/
+dist/
+
+# Rust / Tauri
+src-tauri/target/
+
+# Temp files from build workaround
+bootstrap.sh
+run_build_scripts.sh
+
+# OS
+.DS_Store
+Thumbs.db
