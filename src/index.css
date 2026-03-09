@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+:root {
+  /* Design tokens from .pen */
+  --bg-primary: #0F1117;
+  --bg-secondary: #1A1D27;
+  --bg-card: #242836;
+  --bg-input: #2A2E3D;
+  --text-primary: #F0F2F5;
+  --text-secondary: #8B91A0;
+  --text-muted: #555B6E;
+  --accent-focus: #3B82F6;
+  --accent-focus-dim: #1E3A5F;
+  --accent-break: #34D399;
+  --accent-break-dim: #1A3D2E;
+  --accent-danger: #EF4444;
+  --border: #2E3345;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
+  }
+
+  /* Remove number input spinners */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Thin scrollbar for dark mode */
+  .scrollbar-dark::-webkit-scrollbar {
+    width: 4px;
+  }
+  .scrollbar-dark::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-dark::-webkit-scrollbar-thumb {
+    background: #2E3345;
+    border-radius: 2px;
+  }
+  .scrollbar-dark::-webkit-scrollbar-thumb:hover {
+    background: #555B6E;
+  }
+}
