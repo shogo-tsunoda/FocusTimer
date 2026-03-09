@@ -150,7 +150,7 @@ pub fn run() {
                 data_dir,
             }));
 
-            app.manage(app_state);
+            app.manage(app_state.clone());
 
             // Background task: forward timer snapshots to frontend
             let app_handle = app.handle().clone();
@@ -159,6 +159,28 @@ pub fn run() {
                     let _ = app_handle.emit("timer-tick", &snap);
                 }
             });
+
+            // Window close button → hide to tray (quit via tray menu)
+            let handle_for_close = app.handle().clone();
+            let state_for_close = app_state.clone();
+            if let Some(win) = app.get_webview_window("main") {
+                win.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        let minimize = state_for_close
+                            .try_lock()
+                            .ok()
+                            .and_then(|s| s.settings.try_lock().ok().map(|s| s.minimize_to_tray))
+                            .unwrap_or(true);
+
+                        if minimize {
+                            api.prevent_close();
+                            if let Some(w) = handle_for_close.get_webview_window("main") {
+                                let _ = w.hide();
+                            }
+                        }
+                    }
+                });
+            }
 
             // Setup tray
             let quit = MenuItem::with_id(app, "quit", "終了", true, None::<&str>)?;

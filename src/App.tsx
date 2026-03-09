@@ -734,6 +734,25 @@ export default function App() {
   });
   const [tauriReady, setTauriReady] = useState(false);
 
+  // Sound beep using Web Audio API
+  const playBeep = useCallback(() => {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.6);
+      void ctx.close();
+    } catch {
+      // AudioContext not available
+    }
+  }, []);
+
   // Initialize from Tauri backend
   useEffect(() => {
     let unlisten: (() => void) | undefined;
@@ -748,15 +767,25 @@ export default function App() {
         const snap = await invoke<TimerSnapshot>("get_snapshot");
         setSnapshot(snap);
 
+        // Request notification permission
+        if ("Notification" in window && Notification.permission === "default") {
+          await Notification.requestPermission();
+        }
+
         // Subscribe to timer ticks
         unlisten = await listen<TimerSnapshot>("timer-tick", (event) => {
           setSnapshot(event.payload);
 
-          // Show notification if needed
-          if (event.payload.notify && settings.notifications_enabled) {
-            void new Notification("FocusTimer", {
-              body: event.payload.notify,
-            });
+          if (event.payload.notify) {
+            // Sound
+            if (s.sound_enabled) playBeep();
+            // Desktop notification
+            if (s.notifications_enabled && Notification.permission === "granted") {
+              void new Notification("FocusTimer", {
+                body: event.payload.notify,
+                silent: true, // use our own beep instead of system sound
+              });
+            }
           }
         });
 
@@ -772,7 +801,7 @@ export default function App() {
     return () => {
       unlisten?.();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [playBeep]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const invoke_cmd = useCallback(
     async (cmd: string, args?: Record<string, unknown>) => {
