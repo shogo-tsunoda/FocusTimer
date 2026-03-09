@@ -1,47 +1,43 @@
 # Release Check Skill
 
 ## 目的
-Windows / macOS 向けのリリース前チェックを漏れなく実施する。
 
----
+Windows / macOS 向けリリース前に、最低限落としてはいけない項目を詰めるためのスキルです。
 
-## チェック項目
-- type check
+## 必須確認
+
+- 型チェック
 - lint
 - clippy
 - build
-- key user flows
-- settings persistence
-- notifications
-- tray behavior
-- startup speed
-- memory / cpu sanity check
+- 主要フロー確認
 
----
+## Windows / macOS 確認観点
 
-## UI確認
-- Pencil との差分が許容範囲か
-- Focus / Break の色と状態差が正しいか
-- Settings の表示崩れがないか
+- 起動、終了、再起動
+- 通知
+- トレイ
+- ウィンドウ表示と最小化
+- フォントやテキスト崩れ
 
----
+## UI 確認
 
-## OS確認
-### Windows
-- tray
-- notification
-- always-on-top
-- packaging basics
+- `.design/design.pen` との差分が許容範囲か
+- Focus は青系、Break は緑系か
+- 余白、整列、強弱が破綻していないか
+- hover / active / disabled が正しいか
 
-### macOS
-- launch
-- notification
-- tray/menu bar behavior
-- packaging basics
+## 性能確認
 
----
+- idle 時 CPU
+- セッション実行時 CPU
+- 常駐時メモリ
+- 起動速度
 
-## 禁止
-- 片OSのみ確認での出荷
-- 型・lint 未通過での出荷
-- 主要フロー未確認での出荷
+## 出荷停止条件
+
+- タイマー精度に不安がある
+- 主要フロー未確認
+- OS 片方で破綻
+- 型、lint、clippy、build の未通過
+- 大きな UI 乖離

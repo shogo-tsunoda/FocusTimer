@@ -1,161 +1,62 @@
 # AGENTS.md
 
-このファイルは Codex や他のエージェント向けの入口です。  
-このリポジトリで作業する際は、このファイルを起点として詳細ドキュメントと skills を参照してください。
-
----
+このファイルは Codex / Claude Code などの AI エージェント向けの入口です。  
+詳細規約は `docs/` と `.agents/` 配下に分離し、このファイルでは着手順と参照先だけを短く示します。
 
 ## プロジェクト概要
 
-このプロジェクトは、Tauri + Rust + React + TypeScript で構築する
-**軽量・高速・シンプルなポモドーロデスクトップアプリ**です。
+このリポジトリは Tauri v2 + Rust + React + TypeScript で構築する、軽量なポモドーロデスクトップアプリです。
 
-対象プラットフォーム:
+- 対象 OS: Windows / macOS
+- UI 正本: `.design/design.pen`
+- 重視事項: 軽量性、高速起動、正確なタイマー、自然な OS 挙動、保守性
 
-- Windows
-- macOS
-
-このプロジェクトでは、以下を最重要とします。
-
-1. Pencil デザインへの忠実な実装
-2. 低CPU・低メモリ
-3. 速い起動
-4. 正確で安定したタイマー
-5. シンプルな UX
-6. 保守しやすい構成
-
----
-
-## 最初に参照するファイル
-
-必ず以下を読むこと。
+## 最初に読むファイル
 
 1. `docs/agent-core.md`
 2. `docs/architecture.md`
 3. `docs/coding-standards.md`
 
-必要に応じて以下も参照すること。
+必要に応じて以下も読むこと。
 
 - `docs/workflows/tauri-react.md`
 - `docs/workflows/testing.md`
 - `docs/workflows/release.md`
 
----
+## 参照すべき skills
 
-## Skills の使い方
+タスクに応じて以下を参照してください。
 
-このリポジトリでは、具体的な作業知識を `.agents/skills/` に分離しています。  
-タスクの種類に応じて、適切な skill を読んでから作業してください。
+- UI 実装: `.agents/skills/design-implementation/SKILL.md`
+- React 実装: `.agents/skills/react-ui-implementation/SKILL.md`
+- Tauri 軽量化: `.agents/skills/tauri-performance/SKILL.md`
+- Rust バックエンド: `.agents/skills/rust-backend/SKILL.md`
+- 品質レビュー: `.agents/skills/quality-assurance/SKILL.md`
+- テスト検証: `.agents/skills/testing-and-validation/SKILL.md`
+- リリース前確認: `.agents/skills/release-check/SKILL.md`
 
-### UI / デザイン
-- `.agents/skills/design-implementation/SKILL.md`
+## 中核原則の要約
 
-### React UI 実装
-- `.agents/skills/react-ui-implementation/SKILL.md`
-
-### Tauri 軽量実装
-- `.agents/skills/tauri-performance/SKILL.md`
-
-### Rust バックエンド / タイマー / OS連携
-- `.agents/skills/rust-backend/SKILL.md`
-
-### 品質レビュー / 最適化
-- `.agents/skills/quality-assurance/SKILL.md`
-
-### テスト設計 / 検証
-- `.agents/skills/testing-and-validation/SKILL.md`
-
-### リリース前確認
-- `.agents/skills/release-check/SKILL.md`
-
----
-
-## 中核原則
-
-### Pencil を正本とする
-- `.pen` ファイルと書き出し画像を UI の正本とする
-- 独断で UI を変更しない
-- 変更が必要なら理由を明示する
-
-### パフォーマンス優先
-- 常駐型ユーティリティとして低負荷を優先する
-- 重い依存を避ける
-- フロントエンドに不要な負荷を持ち込まない
-
-### 単純さ優先
-- 多機能化しない
-- 過剰設計しない
-- 必要十分な設計と実装を選ぶ
-
-### OS差分への配慮
+- `.design/design.pen` を UI 実装の正本とする
+- タイマー主制御は Rust / Tauri 側に寄せる
+- React は表示層中心に保つ
+- 低 CPU / 低メモリ / 高速起動を優先する
 - Windows / macOS の自然な挙動を損なわない
-- ただし UI の統一感は維持する
+- 変更は小さく、理由を明示する
 
----
+## 禁止事項の要約
 
-## 実装方針
-
-### フロントエンド
-- React は表示層中心
-- state は最小限
-- 不要な再レンダリングを避ける
-- タイマーの主制御を持たない
-
-### バックエンド
-- Rust / Tauri がタイマー主制御を持つ
-- OS機能連携を担う
-- 通知・トレイ・ウィンドウ制御を扱う
-
-### UI
-- タイマー表示を最優先
-- Focus は青系
-- Break は緑系
-- ミニマルな情報構造を維持する
-
----
-
-## 変更前に明示すべきこと
-
-大きな変更を行う場合、作業前に簡潔に以下をまとめること。
-
-1. 何を変えるか
-2. なぜ変えるか
-3. Pencil デザインとの関係
-4. パフォーマンスへの影響
-5. 依存追加の有無
-
----
-
-## 禁止事項
-
-- Pencil デザインの独断変更
+- `.design/design.pen` を無視した独断の UI 再設計
 - 不要な依存追加
-- 重い UI フレームワークの導入
 - 毎フレーム更新前提の実装
-- フロントだけでタイマー主制御を持つこと
-- 修正と無関係なリファクタ混入
-- 先回りした過剰設計
+- フロントエンドだけでタイマー主制御を持つ設計
+- 修正と無関係なリファクタの混入
+- 過剰設計や先回り実装
 
----
-
-## 推奨作業順
+## 基本の進め方
 
 1. docs を読む
-2. relevant skills を読む
-3. 実装方針を短く示す
-4. 小さい単位で実装する
-5. 型・lint・テストを確認する
-6. パフォーマンス観点で見直す
-
----
-
-## 最終目標
-
-このアプリは以下を実現すること。
-
-- 軽量
-- 高速
-- デザイン忠実
-- Windows / macOS 両対応
-- 単機能でわかりやすい
-- 常駐しても気にならない
+2. 関連 skill を読む
+3. 変更対象、理由、性能影響を短く整理する
+4. 小さく実装する
+5. 型、lint、テスト、主要フローを確認する
