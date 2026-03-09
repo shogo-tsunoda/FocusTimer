@@ -497,7 +497,7 @@ function SettingsScreen({
   return (
     <div
       className="flex flex-col w-[320px] bg-[#0F1117] rounded-[16px] select-none"
-      style={{ height: "520px" }}
+      style={{ height: "460px" }}
     >
       {/* Header – drag region */}
       <div
